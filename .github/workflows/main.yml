@@ -1,0 +1,48 @@
+name: CICD
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  pre_commit:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - uses: pre-commit/action@v2.0.3
+
+  build-deploy:
+    runs-on: ubuntu-20.04
+    needs: pre_commit
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 1
+        lfs: true
+
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 19
+    - run: npm install
+
+    - name: Setup Hugo
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: 0.112.3
+
+    - name: Build
+      run: hugo --minify
+
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./public
+        cname: whisper.aidanspendlove.dev
